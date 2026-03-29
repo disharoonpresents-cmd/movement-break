@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Movement Break — WFMU</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --white: #f5f2ec; --black: #111; --mid: #888; --rule: #ccc; }
+html, body { min-height: 100vh; background: var(--white); color: var(--black); font-family: 'EB Garamond', Georgia, serif; }
+body { display: grid; grid-template-rows: auto 1fr auto; min-height: 100vh; }
+
+header { border-bottom: 1.5px solid var(--black); padding: 18px 36px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.site-name { font-family: 'Space Mono', monospace; font-size: 0.68rem; letter-spacing: 0.15em; text-transform: uppercase; }
+.header-right { font-size: 0.82rem; font-style: italic; color: var(--mid); }
+
+main { display: grid; grid-template-columns: 1fr 1px 1fr; max-width: 960px; margin: 0 auto; width: 100%; }
+.col-divider { background: var(--rule); }
+.col-timer { padding: 44px 48px 44px 36px; }
+.col-radio  { padding: 44px 36px 44px 48px; }
+
+.col-label { font-family: 'Space Mono', monospace; font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mid); margin-bottom: 28px; display: flex; align-items: center; gap: 10px; }
+.col-label::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+
+/* TIMER */
+.timer-number { font-size: 5.5rem; font-weight: 400; letter-spacing: -0.02em; line-height: 1; margin-bottom: 6px; min-height: 88px; display: flex; align-items: center; transition: color 0.3s; }
+.timer-number.inactive { color: var(--rule); }
+.timer-status { font-size: 0.88rem; font-style: italic; color: var(--mid); margin-bottom: 32px; min-height: 20px; }
+.section-label { font-family: 'Space Mono', monospace; font-size: 0.58rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mid); margin-bottom: 10px; }
+
+.interval-row { display: flex; border: 1px solid var(--black); margin-bottom: 28px; width: fit-content; }
+.int-btn { font-family: 'Space Mono', monospace; font-size: 0.65rem; letter-spacing: 0.06em; padding: 7px 14px; background: transparent; border: none; border-right: 1px solid var(--black); cursor: pointer; color: var(--mid); transition: all 0.1s; }
+.int-btn:last-child { border-right: none; }
+.int-btn:hover { background: #e8e5de; color: var(--black); }
+.int-btn.active { background: var(--black); color: var(--white); }
+
+.progress-track { width: 100%; height: 1px; background: var(--rule); margin-bottom: 28px; }
+.progress-fill { height: 100%; background: var(--black); width: 0%; transition: width 1s linear; }
+
+.action-row { display: flex; gap: 10px; margin-bottom: 36px; }
+.btn { font-family: 'Space Mono', monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; padding: 10px 20px; cursor: pointer; border: 1px solid var(--black); background: transparent; color: var(--black); transition: all 0.1s; }
+.btn-primary { background: var(--black); color: var(--white); }
+.btn-primary:hover { background: #333; }
+.btn-secondary:hover { background: #e8e5de; }
+
+.streak-line { font-size: 0.85rem; color: var(--mid); font-style: italic; }
+.streak-count { font-style: normal; font-weight: 500; color: var(--black); }
+
+/* RADIO RECOMMENDATIONS */
+.radio-intro { font-size: 0.88rem; font-style: italic; color: var(--mid); margin-bottom: 24px; line-height: 1.5; }
+
+.show-list { list-style: none; border-top: 1px solid var(--rule); }
+.show-item { border-bottom: 1px solid var(--rule); }
+.show-link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 0;
+  text-decoration: none;
+  color: var(--black);
+  transition: all 0.1s;
+}
+.show-link:hover { padding-left: 4px; }
+.show-link:hover .show-name { color: var(--black); }
+.show-link:hover .show-arrow { opacity: 1; }
+.show-name {
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--black);
+}
+.show-host {
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--mid);
+  display: block;
+  margin-top: 1px;
+}
+.show-arrow {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--mid);
+  opacity: 0;
+  transition: opacity 0.1s;
+  flex-shrink: 0;
+}
+
+hr.rule { border: none; border-top: 1px solid var(--rule); margin: 24px 0; }
+
+/* WAITING PROMPT */
+.prompt-wrap { min-height: 110px; }
+.prompt-active { font-size: 1.42rem; font-style: italic; line-height: 1.45; letter-spacing: -0.01em; display: none; animation: emerge 0.35s ease; }
+@keyframes emerge { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.prompt-idle { font-size: 0.88rem; font-style: italic; color: var(--rule); line-height: 1.55; }
+
+/* OVERLAY */
+.overlay { position: fixed; inset: 0; background: var(--black); z-index: 200; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px; }
+.overlay.show { display: flex; }
+.ov-inner { max-width: 520px; width: 100%; text-align: center; }
+.ov-eyebrow { font-family: 'Space Mono', monospace; font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 20px; }
+.ov-title { font-size: 4rem; font-weight: 400; font-style: italic; color: var(--white); line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 8px; }
+.ov-rule { border: none; border-top: 1px solid rgba(255,255,255,0.12); width: 48px; margin: 22px auto; }
+.ov-move { font-size: 1.28rem; font-style: italic; color: rgba(255,255,255,0.65); line-height: 1.5; margin-bottom: 42px; max-width: 400px; margin-left: auto; margin-right: auto; }
+.ov-btns { display: flex; gap: 12px; justify-content: center; }
+.ov-btn { font-family: 'Space Mono', monospace; font-size: 0.62rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 11px 26px; border: 1px solid rgba(255,255,255,0.25); background: transparent; color: var(--white); cursor: pointer; transition: all 0.1s; }
+.ov-btn-done { background: var(--white); color: var(--black); border-color: var(--white); }
+.ov-btn-done:hover { background: #ddd; }
+.ov-btn:hover { border-color: rgba(255,255,255,0.6); }
+
+/* FOOTER */
+footer { border-top: 1px solid var(--rule); padding: 12px 36px; display: flex; justify-content: space-between; align-items: center; }
+.footer-mono { font-family: 'Space Mono', monospace; font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--rule); }
+
+@media (max-width: 620px) {
+  main { grid-template-columns: 1fr; }
+  .col-divider { height: 1px; width: 100%; }
+  .col-timer, .col-radio { padding: 32px 24px; }
+  header, footer { padding: 14px 24px; }
+  .timer-number { font-size: 4rem; }
+  .ov-title { font-size: 2.8rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay">
+  <div class="ov-inner">
+    <div class="ov-eyebrow">Movement Break</div>
+    <div class="ov-title">Time to move.</div>
+    <hr class="ov-rule">
+    <div class="ov-move" id="ovMove">Let the body lead.</div>
+    <div class="ov-btns">
+      <button class="ov-btn ov-btn-done" onclick="didIt()">I moved — reset</button>
+      <button class="ov-btn" onclick="snooze()">5 more minutes</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <span class="site-name">Movement Break / WFMU</span>
+  <span class="header-right">a practice for the working body</span>
+</header>
+
+<main>
+  <div class="col-timer">
+    <div class="col-label">Timer</div>
+    <div class="timer-number inactive" id="timerNum">—</div>
+    <div class="timer-status" id="timerStatus">not yet started</div>
+    <div class="section-label">Interval</div>
+    <div class="interval-row">
+      <button class="int-btn" onclick="setMin(20,this)">20 min</button>
+      <button class="int-btn active" onclick="setMin(45,this)">45 min</button>
+      <button class="int-btn" onclick="setMin(60,this)">60 min</button>
+      <button class="int-btn" onclick="setMin(90,this)">90 min</button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progFill"></div></div>
+    <div class="action-row">
+      <button class="btn btn-primary" id="startBtn" onclick="toggleTimer()">Start</button>
+      <button class="btn btn-secondary" onclick="resetTimer()">Reset</button>
+    </div>
+    <div class="streak-line">
+      <span class="streak-count" id="streakNum">0</span> movement breaks today
+    </div>
+  </div>
+
+  <div class="col-divider"></div>
+
+  <div class="col-radio">
+    <div class="col-label">Radio recommendations</div>
+
+    <p class="radio-intro">freeform radio from Jersey City, NJ — 91.1 fm &amp; wfmu.org</p>
+
+    <ul class="show-list">
+      <li class="show-item">
+        <a class="show-link" href="https://wfmu.org/playlists/M1" target="_blank">
+          <span><span class="show-name">Mona's show</span><span class="show-host">Mona</span></span>
+          <span class="show-arrow">↗</span>
+        </a>
+      </li>
+      <li class="show-item">
+        <a class="show-link" href="https://wfmu.org/playlists/WA" target="_blank">
+          <span><span class="show-name">Wake with Clay Pigeon</span><span class="show-host">Clay Pigeon · Mon–Fri 6–9am</span></span>
+          <span class="show-arrow">↗</span>
+        </a>
+      </li>
+      <li class="show-item">
+        <a class="show-link" href="https://wfmu.org/playlists/BJ" target="_blank">
+          <span><span class="show-name">Put The Needle On The Record</span><span class="show-host">Billy Jam</span></span>
+          <span class="show-arrow">↗</span>
+        </a>
+      </li>
+      <li class="show-item">
+        <a class="show-link" href="https://wfmu.org/playlists/M4" target="_blank">
+          <span><span class="show-name">Mahogany</span><span class="show-host">Bailey</span></span>
+          <span class="show-arrow">↗</span>
+        </a>
+      </li>
+      <li class="show-item">
+        <a class="show-link" href="https://wfmu.org/playlists/CM" target="_blank">
+          <span><span class="show-name">Feelings</span><span class="show-host">Michele with One "L"</span></span>
+          <span class="show-arrow">↗</span>
+        </a>
+      </li>
+    </ul>
+
+    <hr class="rule">
+
+    <div class="col-label">While you are waiting</div>
+    <div class="prompt-wrap">
+      <div class="prompt-active" id="promptActive"></div>
+      <div class="prompt-idle" id="promptIdle">A meditative prompt will appear here once the timer starts.</div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span class="footer-mono">For the working body at home</span>
+  <span class="footer-mono">wfmu.org · 91.1 fm</span>
+</footer>
+
+
+
+<script>
+let secs = 45 * 60, remaining = secs, running = false, tid = null, streak = 0;
+
+// ── 100 UNIQUE MEDITATIVE PROMPTS, shuffled without repeats ──
+const ALL_PROMPTS = [
+  // Breath & stillness
+  "Notice where your breath is held. Let it release.",
+  "Breathe into your back body. Stay there.",
+  "Exhale slowly until there is nothing left. Then wait.",
+  "Follow one breath all the way in and all the way out.",
+  "Let each exhale soften the surface of your skin.",
+  "Rest in the pause between breaths.",
+  "Breathe as if breathing were the only thing asked of you.",
+  "Notice the temperature of the air as it enters.",
+  "Let your inhale lift you slightly. Let the exhale settle you.",
+  "Find a breath that requires no effort.",
+  // Sensation & noticing
+  "Notice every point where your body meets a surface.",
+  "Bring your attention to the soles of your feet.",
+  "Find where tension lives in your body right now. Observe it.",
+  "Scan slowly from the top of your skull to the tips of your toes.",
+  "Notice the weight of your hands.",
+  "Feel the backs of your knees. How rarely they receive attention.",
+  "Locate the center of your chest. Rest your attention there.",
+  "Notice the space behind your eyes.",
+  "Find three sensations you haven't registered today.",
+  "What is the quality of contact between your feet and the floor?",
+  "Notice your jaw. Let it soften without forcing it.",
+  "What is the temperature of your hands right now?",
+  "Feel the width of your pelvis. Let it settle.",
+  "Bring awareness to your tongue. Where does it rest?",
+  "Notice the small muscles around your eyes. Release them.",
+  // Attention & perception
+  "Listen past the nearest sound to the sounds beneath it.",
+  "Find the softest sound you can hear.",
+  "Without moving, sense the space directly behind you.",
+  "Name five things you can hear right now, from closest to farthest.",
+  "Look at something near you as if you have never seen it before.",
+  "Rest your gaze on something still. Let it receive your attention.",
+  "Sense the edges of the room without looking at them.",
+  "Notice what you can smell. Take your time.",
+  "Look at a shadow. Track where it begins and ends.",
+  "Watch a fixed point. Notice how attention wants to move.",
+  // Gravity & ground
+  "Let your weight drop into whatever is supporting you.",
+  "Feel the floor's resistance to your weight. It is holding you.",
+  "Imagine roots extending from the base of your spine.",
+  "Release the muscles that have been holding you upright unnecessarily.",
+  "Let gravity have you for thirty seconds.",
+  "Notice where you resist being held by the ground.",
+  "Feel how little effort it takes to simply be still.",
+  "Soften your belly and let it fall toward the earth.",
+  "Let your shoulders drop without telling them to.",
+  "Rest the full weight of your skull back and down.",
+  // Imagination & visualization
+  "Imagine water moving slowly through your spine.",
+  "Picture the space your body displaces in the room.",
+  "Imagine your skeleton arranged effortlessly in space.",
+  "Visualize the length of your spine without moving it.",
+  "Picture each vertebra with space between it and the next.",
+  "Imagine the air as something with density. You are moving through it.",
+  "See your body from above, at rest.",
+  "Imagine your breath as a color. Watch it move.",
+  "Picture stillness as a substance that fills the room.",
+  "Imagine time slowing to a pace you can actually feel.",
+  // Somatic & subtle movement
+  "Roll your ankles gently. Then be still.",
+  "Let your eyes close and track the darkness behind them.",
+  "Soften the roof of your mouth.",
+  "Release the muscles along the back of your neck, one by one.",
+  "Let your fingers uncurl without instruction.",
+  "Relax the small muscles between your ribs.",
+  "Unclench any part of your body that is holding.",
+  "Let your face go slack. Give it permission.",
+  "Soften behind your collarbones.",
+  "Notice any micro-movements your body is making on its own.",
+  // Time & presence
+  "Do nothing for twenty seconds. Notice what arises.",
+  "Let this moment be complete as it is.",
+  "There is nowhere else to be.",
+  "Stay here until you feel you have actually arrived.",
+  "Notice the quality of your attention right now.",
+  "Resist the impulse to move or to think. Just be in the interval.",
+  "Let the next minute pass without trying to fill it.",
+  "Inhabit this exact moment fully.",
+  "Set down what you were just doing. It will wait.",
+  "Notice how it feels to pause.",
+  // Body in space
+  "Sense the space above your head.",
+  "Feel the air that surrounds your arms.",
+  "Notice the volume of space your body occupies.",
+  "Feel the width of your shoulders in relation to the room.",
+  "Sense the shape you are making in the world right now.",
+  "Notice the boundary between your skin and the air.",
+  "Feel the distance between your hands.",
+  "Observe your body as an object at rest in space.",
+  "Notice the proportion of you to the room.",
+  "Sense the light falling on your skin.",
+  // Nervous system & letting go
+  "Let your nervous system catch up to the pace of now.",
+  "Give your body permission to stop anticipating.",
+  "Release any task from your hands, even an imaginary one.",
+  "Rest your mind on something that requires no interpretation.",
+  "Let the complexity of your day recede, just briefly.",
+  "Notice if your body is braced. Unbrace it.",
+  "Soften your response to everything, for thirty seconds.",
+  "Let your thoughts slow without trying to stop them.",
+  "Stop performing alertness. Let your body be off-duty.",
+  "Rest. Fully. Without condition.",
+];
+
+// ── 60 KINETIC MOVEMENT PROMPTS for the break overlay ──
+const MOVE_PROMPTS = [
+  // Body shaking & releasing
+  "Shake your hands like you are trying to fling water off them.",
+  "Shake out each limb — arms, legs, head — one at a time.",
+  "Bounce on your heels until something loosens.",
+  "Let your whole body vibrate. Start from the feet.",
+  "Shake your shoulders free from your neck.",
+  "Swing your arms across your body like you mean it.",
+  "Roll your head slowly in a full circle. Both directions.",
+  "Let your spine undulate from the tailbone upward.",
+  "Shake out your hips. Give them full permission.",
+  "Flop your upper body forward and dangle. Sway.",
+  // Traveling & space
+  "Walk to the farthest wall in your space and back. Make it count.",
+  "Move from one end of the room to the other without using your usual walk.",
+  "Spiral slowly through your space, changing levels as you go.",
+  "Find every corner of your room with your body.",
+  "Walk as if the floor has a different texture in each zone.",
+  "Pace, but make it a dance.",
+  "Move through your space as if the air is thick.",
+  "Travel sideways through the room. Do not turn forward.",
+  "Circle the room three times. Let each circuit feel different.",
+  "Find a new path through your space that you have never taken.",
+  // Spine & torso
+  "Roll your spine down to a forward fold. Hang there. Roll back up.",
+  "Side bend slowly left, then right. Reach through the top arm.",
+  "Twist your torso left and right, letting your arms follow loosely.",
+  "Let your ribcage lead you in a slow figure eight.",
+  "Arch and round your back five times. Make it fluid.",
+  "Reach your arms overhead and lengthen everything upward.",
+  "Let your torso collapse forward and rebuild it vertebra by vertebra.",
+  "Roll your shoulders back ten times, then forward ten times.",
+  "Find a spiral in your spine and follow it all the way through.",
+  "Reach in six directions: up, down, left, right, forward, back.",
+  // Arms & hands
+  "Conduct an imaginary orchestra for thirty seconds.",
+  "Let your arms move as if they are underwater.",
+  "Draw large circles in the air with both arms simultaneously.",
+  "Reach one arm as far as it will go in every direction.",
+  "Let your hands lead you somewhere. Follow without thinking.",
+  "Open and close your hands ten times, slowly, then fast.",
+  "Swim through the air. Any stroke.",
+  "Let one arm do something completely unfamiliar.",
+  "Push the air away from you with both palms. Push hard.",
+  "Wring your hands and arms as if wringing out a towel.",
+  // Hips & legs
+  "Circle your hips ten times in each direction.",
+  "March in place with high knees for thirty seconds.",
+  "Lunge side to side slowly, sinking into each one.",
+  "Step and tap, step and tap — make up the pattern as you go.",
+  "Stomp your feet alternately, letting the vibration travel upward.",
+  "Sway your hips to a beat only you can hear.",
+  "Squat down slowly and rise back up three times.",
+  "Kick your feet out behind you, alternating, loosely.",
+  "Shift your weight from foot to foot and let the rest follow.",
+  "Stamp once, hard. Then let the stillness after it land.",
+  // Freestyle & full body
+  "Dance to whatever you hear — or to silence.",
+  "Move as if no one is watching, because no one is.",
+  "Do the most embarrassing dance move you know. Fully commit.",
+  "Let your body do what it actually wants to do right now.",
+  "Move for thirty seconds without any plan.",
+  "Find the gesture your body has been wanting to make all day.",
+  "Let your whole self be briefly ridiculous.",
+  "Move until you feel even one percent more like yourself.",
+  "Dance out whatever the last hour felt like.",
+  "Take up the most space you possibly can. Then come back.",
+];
+
+// Meditative prompt deck (for "while you are waiting")
+let deck = [];
+function refillDeck() {
+  deck = [...ALL_PROMPTS].sort(() => Math.random() - 0.5);
+}
+refillDeck();
+function nextPrompt() {
+  if (deck.length === 0) refillDeck();
+  return deck.pop();
+}
+
+// Movement prompt deck (for break overlay)
+let moveDeck = [];
+function refillMoveDeck() {
+  moveDeck = [...MOVE_PROMPTS].sort(() => Math.random() - 0.5);
+}
+refillMoveDeck();
+function nextMove() {
+  if (moveDeck.length === 0) refillMoveDeck();
+  return moveDeck.pop();
+}
+
+function setMin(m, el) {
+  secs = m * 60; remaining = secs;
+  document.querySelectorAll('.int-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  draw();
+  if (running) resetTimer();
+}
+
+function draw() {
+  const n = document.getElementById('timerNum');
+  if (running) {
+    const mm = String(Math.floor(remaining/60)).padStart(2,'0');
+    const ss = String(remaining%60).padStart(2,'0');
+    n.textContent = mm+':'+ss;
+    n.classList.remove('inactive');
+  } else {
+    n.textContent = '—';
+    n.classList.add('inactive');
+  }
+  const pct = running ? ((secs-remaining)/secs*100) : 0;
+  document.getElementById('progFill').style.width = pct+'%';
+}
+
+function toggleTimer() { running ? pause() : start(); }
+
+function start() {
+  running = true;
+  document.getElementById('startBtn').textContent = 'Pause';
+  document.getElementById('timerStatus').textContent = 'until your next movement break';
+  pickPrompt(); draw();
+  tid = setInterval(tick, 1000);
+}
+
+function pause() {
+  running = false; clearInterval(tid);
+  document.getElementById('startBtn').textContent = 'Resume';
+  document.getElementById('timerStatus').textContent = 'paused';
+}
+
+function resetTimer() {
+  running = false; clearInterval(tid); remaining = secs;
+  document.getElementById('startBtn').textContent = 'Start';
+  document.getElementById('timerStatus').textContent = 'not yet started';
+  document.getElementById('promptActive').style.display = 'none';
+  document.getElementById('promptIdle').style.display = 'block';
+  draw();
+}
+
+function tick() { remaining--; draw(); if (remaining <= 0) ring(); }
+
+function pickPrompt() {
+  const p = nextPrompt();
+  const el = document.getElementById('promptActive');
+  el.style.display = 'none';
+  void el.offsetWidth; // restart animation
+  el.textContent = p;
+  el.style.display = 'block';
+  document.getElementById('promptIdle').style.display = 'none';
+}
+
+function ring() {
+  clearInterval(tid); running = false;
+  document.getElementById('ovMove').textContent = nextMove();
+  document.getElementById('overlay').classList.add('show');
+  beep();
+}
+
+function didIt() {
+  streak++;
+  document.getElementById('streakNum').textContent = streak;
+  document.getElementById('overlay').classList.remove('show');
+  remaining = secs; start();
+}
+
+function snooze() {
+  document.getElementById('overlay').classList.remove('show');
+  remaining = 300; start();
+}
+
+function beep() {
+  try {
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    [0, 0.3].forEach(t => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'sine'; o.frequency.value = 440;
+      g.gain.setValueAtTime(0.18, ctx.currentTime+t);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+t+0.4);
+      o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+0.4);
+    });
+  } catch(e) {}
+}
+
+draw();
+</script>
+</body>
+</html>
